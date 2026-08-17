@@ -1,0 +1,66 @@
+name: Reusable Helm Release
+
+on:
+  workflow_call:
+    inputs:
+      chart-path:
+        description: "Path to the chart directory, e.g. charts/bird-exporter"
+        type: string
+        required: true
+      pages-url:
+        description: "Public URL of the gh-pages Helm repo, e.g. https://czerwonk.github.io/bird_exporter"
+        type: string
+        required: true
+      helm-version:
+        type: string
+        default: v3.21.3
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ inputs.helm-version }}
+
+      - name: Lint chart
+        run: helm lint ${{ inputs.chart-path }}
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p .charts-tmp
+          helm package ${{ inputs.chart-path }} -d .charts-tmp
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Update Helm repository
+        run: |
+          cp .charts-tmp/*.tgz gh-pages/
+          cd gh-pages
+          helm repo index . --url ${{ inputs.pages-url }}
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            CHART_VERSION=$(helm show chart ../${{ inputs.chart-path }} | grep '^version:' | awk '{print $2}')
+            git commit -m "Update Helm chart to version ${CHART_VERSION}"
+            git push
+          fi
