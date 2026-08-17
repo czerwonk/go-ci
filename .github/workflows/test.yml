@@ -9,6 +9,9 @@ on:
       build-command:
         type: string
         default: go build ./...
+      cgo-enabled:
+        type: string
+        default: "1"
       run-security:
         type: boolean
         default: true
@@ -22,6 +25,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     permissions:
       contents: read
+    env:
+      CGO_ENABLED: ${{ inputs.cgo-enabled }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
