@@ -1,0 +1,47 @@
+name: Reusable Update Nix Flake
+
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        type: string
+        default: go.mod
+      nix-path:
+        type: string
+        default: nixpkgs=channel:nixos-unstable
+      commit-message:
+        type: string
+        default: Update vendor hash
+
+jobs:
+  update-flake:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true # needed so git-auto-commit-action can push
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          nix_path: ${{ inputs.nix-path }}
+
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - name: Update flake
+        run: |
+          go mod vendor
+          nix hash path vendor > go.mod.sri
+          rm -Rf vendor
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
+        with:
+          commit_message: ${{ inputs.commit-message }}
