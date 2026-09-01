@@ -15,13 +15,16 @@ on:
       run-security:
         type: boolean
         default: true
+      platforms:
+        type: string
+        default: '["ubuntu-latest", "macos-latest", "windows-latest"]'
 
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        platform: ${{ fromJSON(inputs.platforms) }}
     runs-on: ${{ matrix.platform }}
     permissions:
       contents: read
