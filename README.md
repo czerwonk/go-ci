@@ -121,6 +121,25 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 ```
 
+A repository that ships more than one image calls the workflow once per
+image. `image-name` (GHCR path without registry, default: the repository)
+keeps the refs and build caches apart; `dockerfile`, `target` (stage of a
+multi-stage Dockerfile) and `build-args` (one `KEY=VALUE` per line, added to
+`VERSION`) select what is built:
+
+```yaml
+jobs:
+  docker:
+    uses: czerwonk/go-ci/.github/workflows/docker-publish.yml@v5
+  docker-worker:
+    uses: czerwonk/go-ci/.github/workflows/docker-publish.yml@v5
+    with:
+      image-name: czerwonk/your-project-worker
+      target: worker
+      build-args: |
+        CMD=worker
+```
+
 `your-project/.github/workflows/helm.yml` (only if the project ships a Helm
 chart):
 
