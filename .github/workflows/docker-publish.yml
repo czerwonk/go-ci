@@ -3,6 +3,13 @@ name: Reusable Docker Publish
 on:
   workflow_call:
     inputs:
+      image-name:
+        description: >
+          GHCR image path without registry, e.g. czerwonk/your-project-worker.
+          Defaults to the repository. Set it to publish additional images
+          from the same repository by calling this workflow once per image.
+        type: string
+        default: ""
       dockerhub-image:
         description: >
           Docker Hub image ref, e.g. czerwonk/your-project. Only set this
@@ -20,6 +27,16 @@ on:
       dockerfile:
         type: string
         default: ./Dockerfile
+      target:
+        description: Build stage of a multi-stage Dockerfile. Defaults to the last stage.
+        type: string
+        default: ""
+      build-args:
+        description: >
+          Additional build args, one KEY=VALUE per line. VERSION is always
+          set from the image metadata.
+        type: string
+        default: ""
       cosign-version:
         type: string
         default: v3.1.2
@@ -30,7 +47,7 @@ on:
         required: false
 
 env:
-  GHCR_IMAGE: ghcr.io/${{ github.repository }}
+  GHCR_IMAGE: ghcr.io/${{ inputs.image-name || github.repository }}
 
 jobs:
   build:
@@ -76,8 +93,10 @@ jobs:
           push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          target: ${{ inputs.target }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
+            ${{ inputs.build-args }}
 
   publish:
     if: github.event_name != 'pull_request'
@@ -149,10 +168,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          target: ${{ inputs.target }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
-          cache-from: type=gha,scope=${{ github.repository }}-publish
-          cache-to: type=gha,mode=max,scope=${{ github.repository }}-publish
+            ${{ inputs.build-args }}
+          cache-from: type=gha,scope=${{ inputs.image-name || github.repository }}-publish
+          cache-to: type=gha,mode=max,scope=${{ inputs.image-name || github.repository }}-publish
           provenance: mode=max
           sbom: true
 
