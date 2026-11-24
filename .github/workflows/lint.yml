@@ -8,7 +8,7 @@ on:
         default: go.mod
       golangci-lint-version:
         type: string
-        default: v2.12
+        default: v2.15
 
 jobs:
   lint:
